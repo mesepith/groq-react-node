@@ -12,6 +12,7 @@ client/.env
 # Build outputs
 client/dist/
 client/build/
+client/node_modules/*
 
 # OS
 .DS_Store
