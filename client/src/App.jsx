@@ -9,10 +9,25 @@ export default function App() {
 
   const [answer, setAnswer] = useState("");
   const [wallTimeMs, setWallTimeMs] = useState(null);
-  const [groqTotalTime, setGroqTotalTime] = useState(null);
+
+  // Extra metrics from backend response
+  const [usage, setUsage] = useState(null);
+  const [requestId, setRequestId] = useState(null);
+
   const [error, setError] = useState("");
 
   const canSend = useMemo(() => model && prompt.trim() && !loading, [model, prompt, loading]);
+
+  // Helpers
+  const fmtSec = (s) => (typeof s === "number" ? `${s.toFixed(3)} s` : "—");
+  const fmtTok = (n) => (typeof n === "number" ? n.toLocaleString() : "—");
+  const tokPerSec = (tok, sec) =>
+    typeof tok === "number" && typeof sec === "number" && sec > 0 ? tok / sec : null;
+
+  const overheadMs =
+    wallTimeMs != null && typeof usage?.total_time === "number"
+      ? Math.max(0, wallTimeMs - usage.total_time * 1000)
+      : null;
 
   useEffect(() => {
     (async () => {
@@ -36,7 +51,8 @@ export default function App() {
     setError("");
     setAnswer("");
     setWallTimeMs(null);
-    setGroqTotalTime(null);
+    setUsage(null);
+    setRequestId(null);
 
     try {
       const res = await fetch("/api/chat", {
@@ -52,10 +68,8 @@ export default function App() {
 
       setAnswer(data?.text || "");
       setWallTimeMs(data?.wallTimeMs ?? null);
-
-      // Groq SDK often returns usage.total_time in seconds (when available)
-      const totalTime = data?.usage?.total_time;
-      setGroqTotalTime(typeof totalTime === "number" ? totalTime : null);
+      setUsage(data?.usage ?? null);
+      setRequestId(data?.requestId ?? null);
     } catch (e) {
       setError(e?.message || "Something went wrong");
     } finally {
@@ -109,13 +123,6 @@ export default function App() {
         </div>
       )}
 
-      {(wallTimeMs != null || groqTotalTime != null) && (
-        <div style={{ marginTop: 12, padding: 12, background: "#f6f6f6", border: "1px solid #ddd" }}>
-          <div><b>Wall time:</b> {wallTimeMs} ms</div>
-          {groqTotalTime != null && <div><b>Groq model time:</b> {groqTotalTime} s</div>}
-        </div>
-      )}
-
       {answer && (
         <div style={{ marginTop: 12 }}>
           <h3>Response</h3>
@@ -124,6 +131,89 @@ export default function App() {
           </pre>
         </div>
       )}
+
+      {(wallTimeMs != null || usage != null) && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            background: "#000",
+            border: "1px solid #333",
+            color: "#fff",
+            borderRadius: 8,
+            lineHeight: 1.6,
+          }}
+        >
+          <div>
+            <b>Wall time:</b> {wallTimeMs ?? "—"} ms
+          </div>
+
+          <div style={{ marginTop: 10, opacity: 0.9 }}>
+            <b>Groq timings:</b>
+          </div>
+          <div>
+            <b>total_time:</b> {fmtSec(usage?.total_time)}
+          </div>
+          <div>
+            <b>queue_time:</b> {fmtSec(usage?.queue_time)}
+          </div>
+          <div>
+            <b>prompt_time:</b> {fmtSec(usage?.prompt_time)}
+          </div>
+          <div>
+            <b>completion_time:</b> {fmtSec(usage?.completion_time)}
+          </div>
+
+          {overheadMs != null && (
+            <div>
+              <b>Overhead (wall - Groq):</b> {Math.round(overheadMs)} ms
+            </div>
+          )}
+
+          <div style={{ marginTop: 10, opacity: 0.9 }}>
+            <b>Tokens:</b>
+          </div>
+          <div>
+            <b>prompt_tokens:</b> {fmtTok(usage?.prompt_tokens)}
+          </div>
+          <div>
+            <b>completion_tokens:</b> {fmtTok(usage?.completion_tokens)}
+          </div>
+          <div>
+            <b>total_tokens:</b> {fmtTok(usage?.total_tokens)}
+          </div>
+
+          {usage?.completion_tokens_details?.reasoning_tokens != null && (
+            <div>
+              <b>reasoning_tokens:</b> {fmtTok(usage.completion_tokens_details.reasoning_tokens)}
+            </div>
+          )}
+
+          {tokPerSec(usage?.completion_tokens, usage?.completion_time) != null && (
+            <div>
+              <b>Output speed:</b>{" "}
+              {tokPerSec(usage.completion_tokens, usage.completion_time).toFixed(1)} tok/s
+            </div>
+          )}
+
+          {tokPerSec(usage?.total_tokens, usage?.total_time) != null && (
+            <div>
+              <b>Total speed:</b> {tokPerSec(usage.total_tokens, usage.total_time).toFixed(1)} tok/s
+            </div>
+          )}
+
+          {requestId && (
+            <div style={{ marginTop: 10 }}>
+              <b>Request ID:</b>{" "}
+              <code style={{ color: "#fff", background: "#111", padding: "2px 6px", borderRadius: 6 }}>
+                {requestId}
+              </code>
+            </div>
+          )}
+        </div>
+      )}
+
+      
     </div>
   );
 }
