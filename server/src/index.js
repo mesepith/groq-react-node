@@ -16,7 +16,7 @@ app.use(express.json({ limit: "1mb" }));
 // For local dev (React dev server). In production (same-origin), this won’t matter much.
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN || "http://localhost:7048",
   })
 );
 
