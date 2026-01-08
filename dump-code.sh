@@ -37,7 +37,7 @@ EOF
 
 # Find allowed files (exclude sensitive/ignored, previous dumps, and this script)
 find . \
-  -type d \( -name node_modules -o -name .git -o -path "./client/public" -o -path "./client/src/assets" -o -path "./server/api-keys" \) -prune -o \
+  -type d \( -name node_modules -o -name .git -o -path "./client/public" -o -path "./client/src/assets" -o -path "./client/dist" -o -path "./server/api-keys" \) -prune -o \
   -type f \( \
       -name "package-lock.json" -o \
       -name ".env" -o \
