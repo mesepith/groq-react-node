@@ -43,6 +43,7 @@ find . \
       -name ".env" -o \
       -name ".DS_Store" -o \
       -name "DS_Store" -o \
+      -name "README.md" -o \
       -name "code_dump_*.txt" -o \
       -name "code_dump_*.html" -o \
       -path "*/api-keys/google-stt-tts.json" -o \
